@@ -1,7 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 
 // Your Firebase configuration
@@ -26,11 +25,9 @@ const provider = new GoogleAuthProvider();
 // DOM Elements
 const signInButton = document.getElementById('sign-in-button');
 const signOutButton = document.getElementById('sign-out-button');
-const uploadBox = document.getElementById('upload-box');  // Drag and drop area
+const uploadBox = document.getElementById('upload-box');
 const uploadButton = document.getElementById('upload-button');
 const resumeUpload = document.getElementById('resume-upload');
-const jobDescriptionInput = document.getElementById('job-description');
-const generateButton = document.getElementById('generate-button');
 
 // API URL
 const apiUrl = 'https://p12uecufp5.execute-api.us-west-1.amazonaws.com/default/resume_cover';
@@ -65,12 +62,12 @@ signOutButton.addEventListener('click', () => {
 // Drag and Drop functionality
 uploadBox.addEventListener('dragover', (e) => {
     e.preventDefault();
-    uploadBox.classList.add('dragover'); // Add visual feedback
+    uploadBox.classList.add('dragover');
 });
 
 uploadBox.addEventListener('dragleave', (e) => {
     e.preventDefault();
-    uploadBox.classList.remove('dragover'); // Remove visual feedback
+    uploadBox.classList.remove('dragover');
 });
 
 uploadBox.addEventListener('drop', (e) => {
@@ -79,7 +76,7 @@ uploadBox.addEventListener('drop', (e) => {
 
     const file = e.dataTransfer.files[0];
     if (file && file.type === 'application/pdf') {
-        handleFileUpload(file); // Call file upload function
+        handleFileUpload(file);
     } else {
         alert('Please upload a PDF file.');
     }
@@ -87,13 +84,13 @@ uploadBox.addEventListener('drop', (e) => {
 
 // Upload resume event
 uploadButton.addEventListener('click', () => {
-    resumeUpload.click(); // Trigger file input click
+    resumeUpload.click();
 });
 
 resumeUpload.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file && file.type === 'application/pdf') {
-        handleFileUpload(file); // Call file upload function
+        handleFileUpload(file);
     } else {
         alert('Please select a PDF file.');
     }
@@ -111,11 +108,11 @@ function handleFileUpload(file) {
     uploadBytes(storageRef, file)
         .then((snapshot) => {
             console.log('File uploaded successfully');
-            return getDownloadURL(snapshot.ref); // Get the download URL
+            return getDownloadURL(snapshot.ref);
         })
         .then((url) => {
-            uploadedFileUrl = url; // Store the download URL
-            showJobDescriptionInput(); // Show job description input
+            uploadedFileUrl = url;
+            showJobDescriptionInput();
         })
         .catch(error => {
             console.error('File upload error:', error);
@@ -124,25 +121,19 @@ function handleFileUpload(file) {
 
 // Show Job Description Input
 function showJobDescriptionInput() {
-    // Clear the upload box content
     uploadBox.innerHTML = '';
-
-    // Add the class to remove dashed border
     uploadBox.classList.add('job-description-active');
 
-    // Create and append the text area for job description
     const jobDescriptionInput = document.createElement('textarea');
     jobDescriptionInput.id = 'job-description-input';
     jobDescriptionInput.placeholder = 'Enter the job description here...';
     uploadBox.appendChild(jobDescriptionInput);
 
-    // Set up the "Generate Cover Letter" button
     const generateButton = document.createElement('button');
     generateButton.textContent = 'Generate Cover Letter';
     generateButton.className = 'generate-button';
     uploadBox.appendChild(generateButton);
 
-    // Handle the click event for generating the cover letter
     generateButton.addEventListener('click', () => {
         const description = jobDescriptionInput.value.trim();
         if (description && uploadedFileUrl) {
@@ -153,7 +144,6 @@ function showJobDescriptionInput() {
     });
 }
 
-// Generate Cover Letter
 // Function to show loader
 function showLoader() {
     document.getElementById('loader').style.display = 'flex';
@@ -164,17 +154,15 @@ function hideLoader() {
     document.getElementById('loader').style.display = 'none';
 }
 
+// Generate Cover Letter and Redirect to Payment
 function generateCoverLetter(description) {
-    // Show the loader
     showLoader();
 
-    // Prepare the POST request payload
     const requestData = {
-        link: uploadedFileUrl, // Use the stored download URL
+        link: uploadedFileUrl,
         job_description: description
     };
 
-    // Send POST request to API
     fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -185,40 +173,51 @@ function generateCoverLetter(description) {
     .then(response => response.json())
     .then(data => {
         console.log('Success:', data);
-        const body = JSON.parse(data.body);
-        const coverLetterUrl = body.cover_letter_url;
+        // Use the fixed Stripe payment URL
+        const stripePaymentUrl = 'https://buy.stripe.com/9AQ03N36954wbcs145';
 
-        if (coverLetterUrl) {
-            // Trigger the download
-            const link = document.createElement('a');
-            link.href = coverLetterUrl;
-            link.download = coverLetterUrl.split('/').pop(); // Extract file name from URL
-            document.body.appendChild(link); // Append link to the body
-            link.click(); // Trigger click event
-            document.body.removeChild(link); // Remove link from the body
+        if (stripePaymentUrl) {
+            // Redirect to Stripe payment
+            redirectToStripePayment(stripePaymentUrl);
         } else {
-            alert('Cover letter URL not available.');
+            alert('Payment URL not available.');
         }
     })
     .catch((error) => {
         console.error('Error:', error);
     })
     .finally(() => {
-        // Hide the loader after 30 seconds
-        setTimeout(() => {
-            hideLoader();
-        }, 15000); // 30 seconds delay
+        hideLoader();
     });
 }
 
-// Ensure the generate button click triggers the cover letter generation
-generateButton.addEventListener('click', () => {
-    const description = document.getElementById('job-description-input').value.trim();
-    if (description && uploadedFileUrl) {
-        generateCoverLetter(description);
-    } else {
-        alert('Please enter a job description.');
+// Function to redirect to Stripe payment
+function redirectToStripePayment(stripeUrl) {
+    window.location.href = stripeUrl;
+}
+
+// Handle successful payment and download
+function handleSuccessfulPayment() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment_status');
+    const coverLetterUrl = urlParams.get('cover_letter_url');
+
+    if (paymentStatus === 'success' && coverLetterUrl) {
+        document.getElementById('payment-success').style.display = 'block';
+        
+        // Trigger the download
+        const link = document.createElement('a');
+        link.href = coverLetterUrl;
+        link.download = coverLetterUrl.split('/').pop();
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
+}
+
+// Check for successful payment on page load
+document.addEventListener('DOMContentLoaded', () => {
+    handleSuccessfulPayment();
 });
 
 // Toggle UI based on user auth state
@@ -289,18 +288,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Optional: Handle any other events that should update the progress bar
 });
-
-// Sign out event
-signOutButton.addEventListener('click', async () => {
-    try {
-        await signOut(auth);
-        console.log('User signed out');
-        toggleUI(false);
-        // Refresh the page after signing out
-        window.location.reload();
-    } catch (error) {
-        console.error('Sign out error:', error);
-    }
-});
-
-
