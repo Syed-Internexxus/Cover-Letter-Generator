@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internexxus Cover Letter Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <a href="https://internexxus.com">
+                    <img width="220" height="42" src="logo.jpg" alt="Logo">
+                </a>
+            </div>
+            <div class="auth-buttons">
+                <button class="sign-in" id="sign-in-button">Sign in with Google</button>
+                <button class="get-started" id="sign-out-button" style="display: none;">Sign out</button>
+            </div>
+        </div>
+    </header>
+    <main>
+        <section class="hero">
+            <div class="hero-content">
+                <img src="cover-letter.jpg" alt="Cover Letter Image">
+                <div class="hero-text">
+                    <h1>Create a professional cover letter in minutes.</h1>
+                    <p>Our AI-powered cover letter generator helps you craft personalized cover letters to make a great first impression.</p>
+                    <div class="progress-bar" id="progress-bar">
+                        <div class="step active" id="step1">
+                            <div class="circle">1</div>
+                            <div class="label">Upload Resume</div>
+                        </div>
+                        <div class="step" id="step2">
+                            <div class="circle">2</div>
+                            <div class="label">Add Job Description</div>
+                        </div>
+                        <div class="step" id="step3">
+                            <div class="circle">3</div>
+                            <div class="label">Generate Cover Letter</div>
+                        </div>
+                    </div>
+                    <div class="upload-box" id="upload-box">
+                        <p>Drag and Drop your PDF Resume here or Click to Select</p>
+                        <input type="file" id="resume-upload" accept=".pdf" style="display: none;">
+                        <button class="upload-button" id="upload-button">Select File</button>
+                    </div>
+                    <div class="job-description-box" id="job-description-box" style="display:none;">
+                        <textarea id="job-description" placeholder="Paste job description here"></textarea>
+                        <button class="generate-button" id="generate-button">Generate</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="how-it-works">
+            <h2>How it works</h2>
+            <p>Our cover letter generator scans your resume and the job description to craft a personalized cover letter that highlights your skills and experience relevant to the job.</p>
+        </section>
+        <section class="why-use">
+            <h2>Why use our cover letter generator</h2>
+            <div class="benefits">
+                <div class="benefit">
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJGIEd_79KSWPXqAL6HQNlNXz_BHQKpB6tfA&s" alt="Prospects Icon">
+                    <h3>Improve your job prospects</h3>
+                    <p>Personalize your cover letter to match each job application and stand out from other candidates.</p>
+                </div>
+                <div class="benefit">
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRc5_fQTneIy0rnSyswhRLUXJNbB3VPs0N-QQ&s" alt="Results Icon">
+                    <h3>Get faster results</h3>
+                    <p>Create and refine your cover letter quickly and efficiently with instant feedback.</p>
+                </div>
+                <div class="benefit">
+                    <img src="https://cdn-icons-png.flaticon.com/512/1451/1451817.png" alt="Effort Icon">
+                    <h3>Save time and effort</h3>
+                    <p>Let our generator handle the details so you can focus on preparing for your interviews.</p>
+                </div>
+            </div>
+        </section>
+        <div id="loader" class="loader">
+        <div class="spinner"></div>
+        </div>
+        <section class="cta">
+            <h2>Ready to create your perfect cover letter?</h2>
+            <button class="cta-button">Get Started</button>
+        </section>
+        <section class="faq">
+            <div class="faq-item">
+                <h3 class="faq-question">What is a cover letter?</h3>
+                <div class="faq-answer">
+                    <p>A cover letter is a document that accompanies your resume and introduces you to potential employers. It highlights your most relevant skills and experiences, and explains why you're the best fit for the job. A well-crafted cover letter can help you stand out from other applicants and increase your chances of getting an interview.</p>
+                </div>
+            </div>
+            <div class="faq-item">
+                <h3 class="faq-question">How do I create a personalized cover letter?</h3>
+                <div class="faq-answer">
+                    <p>Using our cover letter generator, you can create a personalized cover letter by uploading your resume and the job description. The generator will analyze the documents and craft a cover letter that highlights your most relevant skills and experiences for the specific job.</p>
+                </div>
+            </div>
+            <div class="faq-item">
+                <h3 class="faq-question">Why is a cover letter important?</h3>
+                <div class="faq-answer">
+                    <p>A cover letter provides an opportunity to showcase your personality, enthusiasm, and communication skills. It allows you to explain how your background and experiences make you a great fit for the job, which can help you stand out from other candidates and increase your chances of getting an interview.</p>
+                </div>
+            </div>  
+        </section>
+        <footer>
+            <p>© Internexxus</p>
+        </footer>    
+    </main>
+
+    <!-- Firebase SDKs and Stripe.js -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+
+    <!-- Merged Custom Script -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
