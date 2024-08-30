@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
@@ -18,11 +18,39 @@
                 </a>
             </div>
             <div class="auth-buttons">
-                <button class="sign-in" id="sign-in-button">Sign in with Google</button>
+                <button class="sign-in" id="sign-in-button">Sign In</button>
                 <button class="get-started" id="sign-out-button" style="display: none;">Sign out</button>
             </div>
         </div>
     </header>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Login</h2>
+            <div class="login-image">
+                <img src="login-illustration.png" alt="Login Illustration">
+            </div>
+            <form>
+                <div class="input-container">
+                    <input type="text" placeholder="Username" required>
+                </div>
+                <div class="input-container">
+                    <input type="password" placeholder="Password" required>
+                </div>
+                <button type="button" id="login-button" class="login-btn">Login</button>
+                <div class="forgot-password">
+                    <a href="#">Forgot Password?</a>
+                </div>
+            </form>
+            <div class="social-login">
+                <p>or</p>
+                <button id="google-sign-in" class="google-sign-in-btn">Sign in with Google</button>
+            </div>
+        </div>
+    </div>
+
     <main>
         <section class="hero">
             <div class="hero-content">
@@ -55,10 +83,6 @@
                     </div>
                 </div>
             </div>
-        </section>
-        <section class="how-it-works">
-            <h2>How it works</h2>
-            <p>Our cover letter generator scans your resume and the job description to craft a personalized cover letter that highlights your skills and experience relevant to the job.</p>
         </section>
         <section class="why-use">
             <h2>Why use our cover letter generator</h2>

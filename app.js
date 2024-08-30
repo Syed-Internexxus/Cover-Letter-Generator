@@ -21,13 +21,18 @@ const storage = getStorage(app);
 
 // Google Auth Provider
 const provider = new GoogleAuthProvider();
-
 // DOM Elements
 const signInButton = document.getElementById('sign-in-button');
 const signOutButton = document.getElementById('sign-out-button');
 const uploadBox = document.getElementById('upload-box');
 const uploadButton = document.getElementById('upload-button');
 const resumeUpload = document.getElementById('resume-upload');
+const loginModal = document.getElementById('login-modal');
+const closeButton = document.querySelector('.close-button');
+const googleSignInButton = document.getElementById('google-sign-in');
+const loginButton = document.getElementById('login-button'); // Login button for email/password
+const emailInput = document.querySelector('input[type="text"]'); // Assuming the email input is of type "text"
+const passwordInput = document.querySelector('input[type="password"]');
 
 // API URL
 const apiUrl = 'https://p12uecufp5.execute-api.us-west-1.amazonaws.com/default/resume_cover';
@@ -35,15 +40,70 @@ const apiUrl = 'https://p12uecufp5.execute-api.us-west-1.amazonaws.com/default/r
 // Variable to store the download URL
 let uploadedFileUrl = '';
 
-// Sign in event
+// Show login modal
 signInButton.addEventListener('click', () => {
+    // Reset the modal's display and opacity to ensure it's shown properly
+    loginModal.style.display = 'flex';
+    setTimeout(() => {
+        loginModal.classList.add('show');
+    }, 10); // Slight delay to allow CSS transition to work
+});
+
+// Close login modal
+closeButton.addEventListener('click', () => {
+    loginModal.classList.remove('show');
+    setTimeout(() => {
+        loginModal.style.display = 'none';
+    }, 300);  // Wait for the transition to complete before hiding
+});
+
+// Close modal when clicking outside of it
+window.addEventListener('click', (event) => {
+    if (event.target === loginModal) {
+        loginModal.classList.remove('show');
+        setTimeout(() => {
+            loginModal.style.display = 'none';
+        }, 300);  // Wait for the transition to complete before hiding
+    }
+});
+
+// Handle Google Sign-In from modal
+googleSignInButton.addEventListener('click', () => {
     signInWithPopup(auth, provider)
         .then(result => {
             console.log('User signed in:', result.user);
+            loginModal.classList.remove('show');
+            setTimeout(() => {
+                loginModal.style.display = 'none';
+            }, 300);  // Wait for the transition to complete before hiding
             toggleUI(true);
         })
         .catch(error => {
             console.error('Sign in error:', error);
+        });
+});
+
+// Handle Email/Password Sign-In
+loginButton.addEventListener('click', () => {
+    const email = emailInput.value;
+    const password = passwordInput.value;
+
+    signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+            // Signed in 
+            const user = userCredential.user;
+            console.log('User signed in with email:', user);
+            loginModal.classList.remove('show');
+            setTimeout(() => {
+                loginModal.style.display = 'none';
+            }, 300);  // Wait for the transition to complete before hiding
+            toggleUI(true);
+        })
+        .catch((error) => {
+            const errorCode = error.code;
+            const errorMessage = error.message;
+            console.error('Email sign in error:', errorCode, errorMessage);
+            alert(`Error: ${errorMessage}`);
         });
 });
 
@@ -53,6 +113,9 @@ signOutButton.addEventListener('click', () => {
         .then(() => {
             console.log('User signed out');
             toggleUI(false);
+            // Reset the modal's state after signing out
+            loginModal.style.display = 'none';
+            loginModal.classList.remove('show');
         })
         .catch(error => {
             console.error('Sign out error:', error);

@@ -65,35 +65,41 @@ nav ul li a {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 60px 20px;
+    padding: 40px 20px;
     background-image: url('backdrop.jpg');
-    background-size: cover; /* Ensure the image covers the hero section */
+    background-size: cover;
 }
 
 .hero-content {
     display: flex;
     max-width: 1200px;
     width: 100%;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .hero img {
-    width: 400px;
+    max-width: 400px;
+    width: 100%;
     height: auto;
     margin-right: 40px;
+    flex-shrink: 0;
 }
 
 .hero-text {
+    flex-grow: 1;
+    max-width: 600px;
+    width: 100%;
+}
+
+.upload-box {
+    margin-top: 20px;
+    width: 100%;
     max-width: 600px;
 }
 
-.hero-text h1 {
-    font-size: 36px;
-    margin-bottom: 20px;
-}
-
-.hero-text p {
-    font-size: 18px;
-    margin-bottom: 40px;
+.generate-button {
+    margin-top: 20px;
 }
 
 /* Progress Bar */
@@ -165,15 +171,15 @@ nav ul li a {
 
 #job-description-input {
     width: 100%;
-    max-width: 600px; /* Ensure it's the same width as the upload box */
+    max-width: 600px;
     height: 200px;
     padding: 20px;
     border: 1px solid #ccc;
     border-radius: 8px;
     box-sizing: border-box;
     margin-bottom: 20px;
-    resize: none; /* Disable resizing */
-    outline: none; /* Remove outline on focus */
+    resize: none;
+    outline: none;
 }
 
 .generate-button {
@@ -198,54 +204,145 @@ nav ul li a {
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.4);
-    display: flex;
+    display: none;
     justify-content: center;
     align-items: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal.show {
+    display: flex;
+    opacity: 1;
 }
 
 .modal-content {
     background-color: #fefefe;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 500px;
-    border-radius: 5px;
+    padding: 30px;
+    border-radius: 15px;
+    width: 400px;
+    max-width: 90%;
+    text-align: center;
+    position: relative;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+    transform: translateY(-50px);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.modal.show .modal-content {
+    transform: translateY(0);
+    opacity: 1;
 }
 
 .close-button {
     color: #aaa;
     float: right;
-    font-size: 28px;
+    font-size: 24px;
     font-weight: bold;
+    position: absolute;
+    top: 15px;
+    right: 20px;
 }
 
 .close-button:hover,
 .close-button:focus {
-    color: black;
+    color: #000;
     text-decoration: none;
     cursor: pointer;
 }
 
-.modal-content textarea {
-    width: 100%;
-    height: 100px;
+.modal-content h2 {
     margin-bottom: 20px;
-    border-radius: 5px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    font-size: 16px;
+    font-size: 24px;
+    color: #333;
 }
 
-.modal-content button {
-    background-color: #007bff;
+.login-image {
+    margin-bottom: 20px;
+}
+
+.login-image img {
+    width: 80px;
+    height: auto;
+}
+
+.input-container {
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.input-container input {
+    width: 100%;
+    padding: 12px 20px;
+    border: 1px solid #ccc;
+    border-radius: 25px;
+    outline: none;
+    font-size: 16px;
+    color: #333;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.input-container input:focus {
+    border-color: #000;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.login-btn {
+    background-color: #000;
     color: white;
     padding: 10px 20px;
     border: none;
-    border-radius: 5px;
+    border-radius: 30px;
     cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+    font-size: 16px;
 }
+
+.login-btn:hover {
+    background-color: #333;
+}
+
+.forgot-password {
+    margin-top: 10px;
+    text-align: right;
+}
+
+.forgot-password a {
+    color: #000;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.social-login {
+    margin-top: 30px;
+}
+
+.social-login p {
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #333;
+}
+
+.google-sign-in-btn {
+    background-color: #db4437;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    width: 100%;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+.google-sign-in-btn:hover {
+    background-color: #c23321;
+}
+
 /* Loader Styles */
 .loader {
     position: fixed;
@@ -254,15 +351,15 @@ nav ul li a {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
-    display: none; /* Hidden by default */
+    display: none;
     justify-content: center;
     align-items: center;
     z-index: 1000;
 }
 
 .loader .spinner {
-    border: 8px solid #f3f3f3; /* Light grey */
-    border-top: 8px solid #3498db; /* Blue */
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #3498db;
     border-radius: 50%;
     width: 60px;
     height: 60px;
@@ -276,26 +373,23 @@ nav ul li a {
 
 /* Remove dashed border when showing the job description box */
 .job-description-active .upload-box {
-    border: none; /* Remove border */
+    border: none;
 }
 
-/* How It Works and Why Use Sections */
-.how-it-works,
+/* Why Use Section */
 .why-use {
-    padding: 60px 20px;
+    padding: 30px 20px;
     text-align: center;
 }
 
-.how-it-works h2,
 .why-use h2 {
-    font-size: 32px;
-    margin-bottom: 20px;
+    font-size: 28px;
+    margin-bottom: 15px;
 }
 
-.how-it-works p,
 .why-use p {
-    font-size: 18px;
-    margin-bottom: 40px;
+    font-size: 16px;
+    margin-bottom: 30px;
 }
 
 /* Features and Benefits */
@@ -304,40 +398,41 @@ nav ul li a {
     display: flex;
     justify-content: space-around;
     flex-wrap: wrap;
+    gap: 10px;
 }
 
 .feature,
 .benefit {
-    max-width: 300px;
+    max-width: 280px;
     text-align: left;
-    margin-bottom: 40px;
+    margin-bottom: 20px;
     border: 2px inset rgba(0, 0, 0, 0.088);
     border-radius: 10px;
-    padding: 20px;
+    padding: 15px;
 }
 
 .feature img,
 .benefit img {
-    width: 50px;
+    width: 45px;
     height: auto;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .feature h3,
 .benefit h3 {
-    font-size: 24px;
-    margin-bottom: 10px;
+    font-size: 22px;
+    margin-bottom: 8px;
 }
 
 .feature p,
 .benefit p {
-    font-size: 16px;
+    font-size: 14px;
 }
 
 /* Call to Action Section */
 .cta {
     background-image: url('backdrop.jpg');
-    background-size: cover; /* Ensure the image covers the CTA section */
+    background-size: cover;
     color: black;
     padding: 60px 20px;
     text-align: center;
@@ -360,9 +455,9 @@ nav ul li a {
 
 /* FAQ Section */
 .faq {
-    margin: auto;
+    margin: 40px auto;
     width: 90%;
-    max-width: 1315px;
+    max-width: 1200px;
     padding: 20px;
     text-align: justify;
     border: 1px solid #ddd;
@@ -425,29 +520,34 @@ footer {
 @media (max-width: 768px) {
     .hero-content {
         flex-direction: column;
-    }
-
-    .how-it-works .steps,
-    .why-use .benefits {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .how-it-works .step,
-    .why-use .benefit {
-        max-width: 90%;
         text-align: center;
+        padding: 20px;
     }
 
-    header ul {
+    .hero img {
+        margin-right: 0;
+        margin-bottom: 20px;
+    }
+
+    .progress-bar {
         flex-direction: column;
     }
 
-    header ul li {
-        margin: 10px 0;
+    .step {
+        width: 100%;
+        margin-bottom: 10px;
     }
 
-    .faq-question {
-        text-align: left;
+    .faq {
+        margin: 20px auto;
+        padding: 15px;
+    }
+
+    .cta {
+        padding: 40px 20px;
+    }
+
+    .cta h2 {
+        font-size: 28px;
     }
 }
