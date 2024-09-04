@@ -244,8 +244,8 @@ nav ul li a {
     background-color: #fefefe;
     padding: 30px;
     border-radius: 15px;
-    width: 400px;
-    max-width: 90%;
+    width: 100%; /* Ensure responsiveness */
+    max-width: 450px; /* Slightly increased to handle sign-up text */
     text-align: center;
     position: relative;
     box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
@@ -543,16 +543,23 @@ footer {
     .hero-content {
         flex-direction: column;
         text-align: center;
-        padding: 20px;
+        padding: 10px 20px; /* Reduced padding */
     }
 
     .hero img {
         margin-right: 0;
-        margin-bottom: 20px;
+        margin-bottom: 10px; /* Reduced margin around the image */
+        max-width: 200px; /* Optional: Reduce image size */
+    }
+
+    .hero-text {
+        margin-top: 10px; /* Bring the text closer to the image */
+        max-width: 100%; /* Ensure the text fills the available space */
     }
 
     .progress-bar {
         flex-direction: column;
+        margin-top: 15px; /* Reduced margin between progress steps */
     }
 
     .step {
@@ -560,16 +567,109 @@ footer {
         margin-bottom: 10px;
     }
 
-    .faq {
-        margin: 20px auto;
-        padding: 15px;
+    .upload-box {
+        padding: 10px 15px; /* Reduced padding inside the upload box */
+        margin: 10px auto; /* Reduced margin around the upload box */
     }
 
     .cta {
-        padding: 40px 20px;
+        padding: 40px 20px; /* Reduced padding */
     }
 
     .cta h2 {
-        font-size: 28px;
+        font-size: 28px; /* Slightly smaller font for mobile */
     }
+
+    /* Adjust any other sections based on need */
+}
+
+/* Styles for tablet devices (iPad, etc.) */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .hero-content {
+        flex-direction: row; /* Keep the layout in row direction */
+        align-items: center; /* Ensure proper alignment */
+        padding: 20px 20px; /* Adjust padding for better layout on tablets */
+    }
+
+    .hero img {
+        max-width: 300px; /* Reduce the image size slightly on tablets */
+        margin-right: 30px; /* Ensure space between the image and text */
+        margin-bottom: 0; /* No need for bottom margin in row direction */
+    }
+
+    .hero-text {
+        max-width: 600px; /* Ensure the text doesn’t exceed layout boundaries */
+        text-align: left; /* Align text to the left */
+    }
+
+    .progress-bar {
+        flex-direction: row; /* Keep progress steps in a row layout */
+        margin-top: 20px; /* Add some margin above the progress bar */
+    }
+
+    .upload-box {
+        padding: 20px; /* Add padding for spacing */
+        max-width: 500px; /* Adjust the width of the upload box */
+        margin: 20px auto; /* Center the upload box */
+    }
+
+    .cta {
+        padding: 50px 20px; /* Slight padding adjustment for tablets */
+    }
+
+    .cta h2 {
+        font-size: 30px; /* Adjust font size for the CTA header */
+    }
+
+    .why-use {
+        padding: 20px; /* Padding adjustment for the "Why Use" section */
+    }
+
+    .benefits {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between; /* Distribute benefits evenly */
+        max-width: 100%; /* Ensure benefits section uses full width */
+    }
+
+    .benefit {
+        max-width: 280px; /* Ensure each benefit box doesn't exceed layout */
+        margin-bottom: 20px;
+    }
+
+    /* Adjustments to other sections as needed for tablet view */
+}
+
+
+#login-button, #signup-button {
+    width: 100%;
+    background-color: #000;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-size: 16px;
+}
+
+#login-button:hover, #signup-button:hover {
+    background-color: #333;
+}
+
+#toggle-auth {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #333;
+}
+
+#toggle-auth a {
+    color: #007bff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#toggle-auth a:hover {
+    text-decoration: underline;
 }
