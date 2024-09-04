@@ -143,11 +143,13 @@ signOutButton.addEventListener('click', () => {
             toggleUI(false);
             loginModal.style.display = 'none';
             loginModal.classList.remove('show');
+            location.reload(); // Refresh the page after signing out
         })
         .catch(error => {
             console.error('Sign out error:', error);
         });
 });
+
 
 // Listen for changes in the auth state (e.g., sign in, sign out)
 onAuthStateChanged(auth, (user) => {
