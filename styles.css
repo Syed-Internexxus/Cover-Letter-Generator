@@ -538,28 +538,46 @@ footer {
     text-align: center;
 }
 
-/* Responsive Styles */
+/* General Mobile Styles */
 @media (max-width: 768px) {
+    body {
+        font-size: 14px; /* Make font slightly smaller for mobile */
+    }
+
+    /* Header */
+    header {
+        padding: 10px 0;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .container {
+        width: 95%;
+    }
+
+    .auth-buttons button {
+        padding: 5px 10px; /* Smaller padding for buttons */
+        font-size: 14px; /* Adjust button font size */
+    }
+
+    /* Hero Section */
     .hero-content {
-        flex-direction: column;
-        text-align: center;
-        padding: 10px 20px; /* Reduced padding */
+        flex-direction: column; /* Stack items vertically */
+        padding: 10px 20px;
     }
 
     .hero img {
-        margin-right: 0;
-        margin-bottom: 10px; /* Reduced margin around the image */
-        max-width: 200px; /* Optional: Reduce image size */
+        max-width: 250px; /* Smaller image */
+        margin-bottom: 15px; /* Adjust margin between image and text */
     }
 
     .hero-text {
-        margin-top: 10px; /* Bring the text closer to the image */
-        max-width: 100%; /* Ensure the text fills the available space */
+        text-align: center; /* Center-align text for mobile */
     }
 
+    /* Progress Bar */
     .progress-bar {
-        flex-direction: column;
-        margin-top: 15px; /* Reduced margin between progress steps */
+        flex-direction: column; /* Stack the progress steps vertically */
+        margin: 20px 0;
     }
 
     .step {
@@ -568,77 +586,116 @@ footer {
     }
 
     .upload-box {
-        padding: 10px 15px; /* Reduced padding inside the upload box */
-        margin: 10px auto; /* Reduced margin around the upload box */
+        padding: 15px;
+        max-width: 90%; /* Ensure the upload box takes up more space */
     }
 
+    /* Modal Styles */
+    .modal {
+        justify-content: flex-start; /* Adjust modal to appear at the top */
+        padding-top: 50px;
+    }
+
+    .modal-content {
+        width: 90%; /* Take more space on mobile */
+        padding: 20px; /* Adjust padding */
+    }
+
+    .modal-content h2 {
+        font-size: 20px; /* Smaller title size */
+    }
+
+    .input-container input {
+        padding: 10px; /* Adjust padding */
+        font-size: 14px; /* Smaller font for inputs */
+    }
+
+    /* Login Button */
+    .login-btn {
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    .google-sign-in-btn {
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    /* FAQ Section */
+    .faq {
+        padding: 10px;
+        font-size: 14px; /* Reduce FAQ text size */
+    }
+
+    /* Call to Action Section */
     .cta {
-        padding: 40px 20px; /* Reduced padding */
+        padding: 40px 20px;
+        text-align: center;
     }
 
     .cta h2 {
-        font-size: 28px; /* Slightly smaller font for mobile */
+        font-size: 28px; /* Adjust header size */
     }
 
-    /* Adjust any other sections based on need */
-}
-
-/* Styles for tablet devices (iPad, etc.) */
-@media (min-width: 768px) and (max-width: 1024px) {
-    .hero-content {
-        flex-direction: row; /* Keep the layout in row direction */
-        align-items: center; /* Ensure proper alignment */
-        padding: 20px 20px; /* Adjust padding for better layout on tablets */
-    }
-
-    .hero img {
-        max-width: 300px; /* Reduce the image size slightly on tablets */
-        margin-right: 30px; /* Ensure space between the image and text */
-        margin-bottom: 0; /* No need for bottom margin in row direction */
-    }
-
-    .hero-text {
-        max-width: 600px; /* Ensure the text doesn’t exceed layout boundaries */
-        text-align: left; /* Align text to the left */
-    }
-
-    .progress-bar {
-        flex-direction: row; /* Keep progress steps in a row layout */
-        margin-top: 20px; /* Add some margin above the progress bar */
-    }
-
-    .upload-box {
-        padding: 20px; /* Add padding for spacing */
-        max-width: 500px; /* Adjust the width of the upload box */
-        margin: 20px auto; /* Center the upload box */
-    }
-
-    .cta {
-        padding: 50px 20px; /* Slight padding adjustment for tablets */
-    }
-
-    .cta h2 {
-        font-size: 30px; /* Adjust font size for the CTA header */
-    }
-
-    .why-use {
-        padding: 20px; /* Padding adjustment for the "Why Use" section */
-    }
-
+    /* Why Use Section */
     .benefits {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: space-between; /* Distribute benefits evenly */
-        max-width: 100%; /* Ensure benefits section uses full width */
+        flex-direction: column; /* Stack benefits vertically */
+        align-items: center;
     }
 
     .benefit {
-        max-width: 280px; /* Ensure each benefit box doesn't exceed layout */
         margin-bottom: 20px;
+        max-width: 90%;
     }
 
-    /* Adjustments to other sections as needed for tablet view */
+    /* Loader Styles */
+    .loader .spinner {
+        width: 40px; /* Smaller loader */
+        height: 40px;
+    }
+
+    /* Footer */
+    footer {
+        padding: 10px 0;
+    }
+}
+
+/* Tablet Devices */
+@media (min-width: 768px) and (max-width: 1024px) {
+    body {
+        font-size: 16px;
+    }
+
+    .hero-content {
+        flex-direction: row; /* Keep it in row for tablets */
+        padding: 20px;
+    }
+
+    .hero img {
+        max-width: 300px; /* Slightly smaller image */
+    }
+
+    .upload-box {
+        max-width: 80%;
+    }
+
+    .modal-content {
+        width: 80%;
+        padding: 30px;
+    }
+
+    /* Call to Action Section */
+    .cta h2 {
+        font-size: 30px;
+    }
+
+    .benefit {
+        max-width: 300px;
+    }
+
+    footer {
+        padding: 15px 0;
+    }
 }
 
 
