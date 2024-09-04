@@ -28,18 +28,19 @@
     <div id="login-modal" class="modal">
         <div class="modal-content">
             <span class="close-button">&times;</span>
-            <h2>Login</h2>
+            <h2 id="auth-header">Login</h2>
             <div class="login-image">
                 <img src="login-illustration.png" alt="Login Illustration">
             </div>
-            <form>
+            <form id="auth-form">
                 <div class="input-container">
-                    <input type="text" placeholder="Username" required>
+                    <input type="text" id="email" placeholder="Email" required>
                 </div>
                 <div class="input-container">
-                    <input type="password" placeholder="Password" required>
+                    <input type="password" id="password" placeholder="Password" required>
                 </div>
                 <button type="button" id="login-button" class="login-btn">Login</button>
+                <button type="button" id="signup-button" class="login-btn" style="display: none;">Sign Up</button>
                 <div class="forgot-password">
                     <a href="#">Forgot Password?</a>
                 </div>
@@ -48,6 +49,8 @@
                 <p>or</p>
                 <button id="google-sign-in" class="google-sign-in-btn">Sign in with Google</button>
             </div>
+            <!-- Toggle Sign-In/Sign-Up Link -->
+            <p id="toggle-auth"><a href="#" id="toggle-link">Sign Up</a></p>
         </div>
     </div>
 
