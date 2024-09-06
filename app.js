@@ -48,7 +48,7 @@ let currentStep = 0;
 const apiUrl = 'https://p12uecufp5.execute-api.us-west-1.amazonaws.com/default/resume_cover';
 
 // Stripe Payment URL
-const stripePaymentUrl = 'https://buy.stripe.com/test_14keYE1E12eHgUgfZ0';
+const stripePaymentUrl = 'https://buy.stripe.com/7sIcQzeORaoQ5S828a';
 
 // Variable to store the download URL
 let uploadedFileUrl = '';
