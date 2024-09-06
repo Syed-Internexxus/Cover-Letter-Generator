@@ -1,7 +1,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, uploadString } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 // Your Firebase configuration
 const firebaseConfig = {
@@ -18,9 +19,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const storage = getStorage(app);
+const db = getFirestore(app);
 
 // Google Auth Provider
 const provider = new GoogleAuthProvider();
+
 // DOM Elements
 const signInButton = document.getElementById('sign-in-button');
 const signOutButton = document.getElementById('sign-out-button');
@@ -30,17 +33,20 @@ const resumeUpload = document.getElementById('resume-upload');
 const loginModal = document.getElementById('login-modal');
 const closeButton = document.querySelector('.close-button');
 const googleSignInButton = document.getElementById('google-sign-in');
-const loginButton = document.getElementById('login-button'); 
+const loginButton = document.getElementById('login-button');
 const signupButton = document.getElementById('signup-button');
 const emailInput = document.querySelector('input[type="text"]');
 const passwordInput = document.querySelector('input[type="password"]');
 const toggleLink = document.getElementById('toggle-link');
-const steps = document.querySelectorAll('.step');  // Progress bar steps
+const steps = document.querySelectorAll('.step');
 let isSignUpMode = false;
 let currentStep = 0;
 
 // API URL
 const apiUrl = 'https://p12uecufp5.execute-api.us-west-1.amazonaws.com/default/resume_cover';
+
+// Stripe Payment URL
+const stripePaymentUrl = 'https://buy.stripe.com/7sIcQzeORaoQ5S828a';
 
 // Variable to store the download URL
 let uploadedFileUrl = '';
@@ -86,6 +92,7 @@ googleSignInButton.addEventListener('click', () => {
                 loginModal.style.display = 'none';
             }, 300);  // Wait for the transition to complete before hiding
             toggleUI(true);
+            checkAndCreatePaymentRecord(result.user);
         })
         .catch(error => {
             console.error('Sign in error:', error);
@@ -106,6 +113,7 @@ loginButton.addEventListener('click', () => {
                 loginModal.style.display = 'none';
             }, 300);  // Wait for the transition to complete before hiding
             toggleUI(true);
+            checkAndCreatePaymentRecord(user);
         })
         .catch((error) => {
             const errorCode = error.code;
@@ -124,8 +132,10 @@ signupButton.addEventListener('click', () => {
         .then((userCredential) => {
             const user = userCredential.user;
             console.log('User signed up:', user);
+            
             toggleUI(true);
             loginModal.style.display = 'none'; // Hide modal after sign-up
+            checkAndCreatePaymentRecord(user);
         })
         .catch((error) => {
             const errorCode = error.code;
@@ -150,12 +160,12 @@ signOutButton.addEventListener('click', () => {
         });
 });
 
-
 // Listen for changes in the auth state (e.g., sign in, sign out)
 onAuthStateChanged(auth, (user) => {
     if (user) {
         // User is signed in
         toggleUI(true);
+        checkAndCreatePaymentRecord(user);
     } else {
         // User is signed out
         toggleUI(false);
@@ -249,7 +259,7 @@ function handleFileUpload(file) {
         });
 }
 
-// Show Job Description Input
+// Show Job Description Input and Start Process
 function showJobDescriptionInput() {
     uploadBox.innerHTML = '';
     uploadBox.classList.add('job-description-active');
@@ -268,25 +278,15 @@ function showJobDescriptionInput() {
         const description = jobDescriptionInput.value.trim();
         if (description && uploadedFileUrl) {
             updateProgressBar(2);  // Move to step 3 on Generate button click
-            generateCoverLetter(description);
+            generateCoverLetterAndCheckPayment(description);  // Generate cover letter first, then handle payment
         } else {
             alert('Please enter a job description.');
         }
     });
 }
 
-// Function to show loader
-function showLoader() {
-    document.getElementById('loader').style.display = 'flex';
-}
-
-// Function to hide loader
-function hideLoader() {
-    document.getElementById('loader').style.display = 'none';
-}
-
-// Generate Cover Letter and Redirect to Payment
-function generateCoverLetter(description) {
+// Generate Cover Letter and Trigger Payment Flow or Download
+function generateCoverLetterAndCheckPayment(description) {
     showLoader();
 
     const requestData = {
@@ -294,6 +294,7 @@ function generateCoverLetter(description) {
         job_description: description
     };
 
+    // First, generate the cover letter
     fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -303,53 +304,182 @@ function generateCoverLetter(description) {
     })
     .then(response => response.json())
     .then(data => {
-        console.log('Success:', data);
-        // Use the fixed Stripe payment URL
-        const stripePaymentUrl = 'https://buy.stripe.com/9AQ03N36954wbcs145';
+        console.log('Cover letter generation success:', data);
 
-        if (stripePaymentUrl) {
-            // Redirect to Stripe payment
-            redirectToStripePayment(stripePaymentUrl);
+        const parsedBody = JSON.parse(data.body);  // Parse the response body
+        const coverLetterUrl = parsedBody.cover_letter_url;  // Extract cover letter URL
+
+        if (coverLetterUrl) {
+            uploadedFileUrl = coverLetterUrl;  // Store the URL for later use
+            console.log('Cover letter URL:', uploadedFileUrl);
+
+            // Store the cover letter URL in Firebase Storage as a text file
+            storeCoverLetterUrlInStorage(coverLetterUrl);
+
+            // Now check payment status after generating the cover letter
+            checkPaymentStatusAndProceed();
         } else {
-            alert('Payment URL not available.');
+            console.error('Cover letter URL not found.');
+            alert('Error generating cover letter. Please try again.');
         }
     })
     .catch((error) => {
-        console.error('Error:', error);
+        console.error('Error generating cover letter:', error);
+        alert('Failed to generate cover letter.');
     })
     .finally(() => {
         hideLoader();
     });
 }
 
-// Function to redirect to Stripe payment
-function redirectToStripePayment(stripeUrl) {
-    window.location.href = stripeUrl;
+// Store Cover Letter URL as a text file in Firebase Storage
+async function storeCoverLetterUrlInStorage(coverLetterUrl) {
+    const user = auth.currentUser;
+    const storageRef = ref(storage, `cover_letters/${user.uid}/cover_letter_url.txt`);
+
+    // Store the URL as text in Firebase Storage
+    await uploadString(storageRef, coverLetterUrl);
+    console.log('Cover letter URL stored as a .txt file in Firebase Storage.');
 }
 
-// Handle successful payment and download
-function handleSuccessfulPayment() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentStatus = urlParams.get('payment_status');
-    const coverLetterUrl = urlParams.get('cover_letter_url');
+// Check payment status and either proceed to payment or download cover letter
+async function checkPaymentStatusAndProceed() {
+    const user = auth.currentUser;
+    if (!user) {
+        alert('Please sign in first.');
+        return;
+    }
 
-    if (paymentStatus === 'success' && coverLetterUrl) {
-        document.getElementById('payment-success').style.display = 'block';
-        
-        // Trigger the download
-        const link = document.createElement('a');
-        link.href = coverLetterUrl;
-        link.download = coverLetterUrl.split('/').pop();
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const paymentDocRef = doc(db, 'payments', user.uid);
+    const paymentDocSnap = await getDoc(paymentDocRef);
+
+    if (paymentDocSnap.exists()) {
+        const paymentData = paymentDocSnap.data();
+        if (paymentData.payment_status === false) {
+            // Redirect to Stripe for payment
+            window.location.href = stripePaymentUrl;
+        } else {
+            // If already paid, retrieve cover letter URL and trigger download
+            fetchCoverLetterUrlFromStorageAndDownload();
+        }
+    } else {
+        alert('Error: Payment record not found.');
     }
 }
 
-// Check for successful payment on page load
-document.addEventListener('DOMContentLoaded', () => {
-    handleSuccessfulPayment();
+// Fetch Cover Letter URL from the stored .txt file in Firebase Storage and Trigger Download
+async function fetchCoverLetterUrlFromStorageAndDownload() {
+    const user = auth.currentUser;
+    const storageRef = ref(storage, `cover_letters/${user.uid}/cover_letter_url.txt`);
+
+    try {
+        const url = await getDownloadURL(storageRef);
+        const response = await fetch(url);
+        const coverLetterUrl = await response.text();  // Read the content (URL) from the .txt file
+
+        if (coverLetterUrl) {
+            uploadedFileUrl = coverLetterUrl;
+            triggerCoverLetterDownload();
+        } else {
+            console.error('Cover letter URL not found in the text file.');
+        }
+    } catch (error) {
+        console.error('Error fetching cover letter URL from storage:', error);
+    }
+}
+
+// Trigger cover letter download and refresh page after download
+function triggerCoverLetterDownload() {
+    if (uploadedFileUrl) {
+        const link = document.createElement('a');
+        link.href = uploadedFileUrl;
+        link.download = 'AI_cover_letter.pdf';  // Rename the file to AI_cover_letter.pdf
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Refresh the page after download, removing URL parameters (like ?id=CHECKOUT_SESSION_ID)
+        setTimeout(() => {
+            window.location.href = window.location.origin;  // This reloads the page without any query parameters
+        }, 2000);  // Wait for 2 seconds before refreshing
+    } else {
+        console.error('No cover letter URL found for download.');
+    }
+}
+
+// Capture the CHECKOUT_SESSION_ID from the URL after payment and update Firestore
+function captureCheckoutSessionAndUpdatePayment() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkoutSessionId = urlParams.get('id');
+
+    if (checkoutSessionId) {
+        const user = auth.currentUser;
+
+        if (!user) {
+            alert('Please sign in first.');
+            return;
+        }
+
+        const paymentDocRef = doc(db, 'payments', user.uid);
+
+        // Immediately store payment info and trigger download
+        setTimeout(async () => {
+            try {
+                // Update Firestore with payment status and session ID
+                await setDoc(paymentDocRef, {
+                    payment_status: true,
+                    checkout_session_id: checkoutSessionId
+                }, { merge: true });
+
+                console.log('Payment status updated successfully with session ID:', checkoutSessionId);
+
+                // Fetch the cover letter URL from Firebase Storage and trigger download
+                fetchCoverLetterUrlFromStorageAndDownload();
+
+            } catch (error) {
+                console.error('Error updating payment status:', error);
+            }
+        }, 1000); // Adding a small delay just for better UX
+    } else {
+        console.error('No checkout session ID found in the URL.');
+    }
+}
+
+// Check for the checkout session and update payment status if successful
+window.addEventListener('load', () => {
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Once the user is authenticated, proceed with checking the session ID and updating the payment status
+            captureCheckoutSessionAndUpdatePayment(user);
+        } else {
+            console.error('User is not signed in.');
+        }
+    });
 });
+
+// Check if the payment record exists and create one if it doesn't
+async function checkAndCreatePaymentRecord(user) {
+    const paymentDocRef = doc(db, 'payments', user.uid);
+    const paymentDocSnap = await getDoc(paymentDocRef);
+
+    if (!paymentDocSnap.exists()) {
+        // Create a payment record with payment_status = false
+        await setDoc(paymentDocRef, { payment_status: false });
+        console.log('Created new payment record for user:', user.uid);
+    } else {
+        console.log('Payment record already exists for user:', user.uid);
+    }
+}
+
+// Show loader
+function showLoader() {
+    document.getElementById('loader').style.display = 'flex';
+}
+
+// Hide loader
+function hideLoader() {
+    document.getElementById('loader').style.display = 'none';
+}
 
 // Function to update the progress bar
 function updateProgressBar(stepIndex) {
@@ -367,10 +497,10 @@ document.querySelectorAll('.faq-question').forEach(question => {
     question.addEventListener('click', () => {
         const answer = question.nextElementSibling;
         const isVisible = answer.style.display === 'block';
-        
+
         // Hide all answers
         document.querySelectorAll('.faq-answer').forEach(a => a.style.display = 'none');
-        
+
         // Toggle current answer
         answer.style.display = isVisible ? 'none' : 'block';
     });
