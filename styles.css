@@ -419,13 +419,15 @@ nav ul li a {
 .features,
 .benefits {
     display: flex;
-    justify-content: space-evenly;
+    justify-content: center;
+    gap: 3em;
     flex-wrap: wrap;
 }
 
 .feature,
 .benefit {
     max-width: 280px;
+    min-height: auto;
     text-align: left;
     margin-bottom: 20px;
     border: 2px inset rgba(0, 0, 0, 0.088);
@@ -725,8 +727,4 @@ footer {
     color: #007bff;
     text-decoration: none;
     cursor: pointer;
-}
-
-#toggle-auth a:hover {
-    text-decoration: underline;
 }
