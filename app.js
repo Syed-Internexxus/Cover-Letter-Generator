@@ -40,6 +40,7 @@ const passwordInput = document.querySelector('input[type="password"]');
 const forgotPasswordLink = document.querySelector('.forgot-password a');  // For the forgot password functionality
 const toggleLink = document.getElementById('toggle-link');
 const authHeader = document.getElementById('auth-header');  // For changing login/signup header
+const steps = document.querySelectorAll('.step');  // Fix: Initialize steps variable
 let isSignUpMode = false;
 let currentStep = 0;
 
