@@ -37,10 +37,10 @@ const loginButton = document.getElementById('login-button');
 const signupButton = document.getElementById('signup-button');
 const emailInput = document.querySelector('input[type="text"]');
 const passwordInput = document.querySelector('input[type="password"]');
-const forgotPasswordLink = document.querySelector('.forgot-password a');  // For the forgot password functionality
+const forgotPasswordLink = document.querySelector('.forgot-password a');
 const toggleLink = document.getElementById('toggle-link');
-const authHeader = document.getElementById('auth-header');  // For changing login/signup header
-const steps = document.querySelectorAll('.step');  // Fix: Initialize steps variable
+const authHeader = document.getElementById('auth-header');
+const steps = document.querySelectorAll('.step');
 let isSignUpMode = false;
 let currentStep = 0;
 
@@ -53,6 +53,87 @@ const stripePaymentUrl = 'https://buy.stripe.com/7sIcQzeORaoQ5S828a';
 // Variable to store the download URL
 let uploadedFileUrl = '';
 
+// Payload decryption functions
+function getQueryParam(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+}
+
+function decryptPayload(encryptedBase64, key, salt) {
+    try {
+        const encrypted = CryptoJS.enc.Base64.parse(encryptedBase64);
+        const keyHash = CryptoJS.SHA256(key);
+        const ivHash = CryptoJS.SHA256(salt).toString(CryptoJS.enc.Hex).substring(0, 32);
+        const iv = CryptoJS.enc.Hex.parse(ivHash);
+
+        const decrypted = CryptoJS.AES.decrypt(
+            { ciphertext: encrypted },
+            keyHash,
+            {
+                iv: iv,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            }
+        );
+
+        const plaintext = decrypted.toString(CryptoJS.enc.Utf8);
+        return JSON.parse(plaintext);
+    } catch (e) {
+        console.error("Decryption failed:", e);
+        return null;
+    }
+}
+
+// Auto sign-in function using payload
+async function autoSignInFromPayload() {
+    const payload = getQueryParam('payload');
+    if (!payload) return false;
+
+    const userData = decryptPayload(payload, 'X4xR@6uL9vDq&d8*JrKqZ5pW$eY1^HbT', 'Pf7!tCm#zE2^Xh9Q');
+    
+    if (!userData) {
+        console.error("Invalid payload");
+        return false;
+    }
+
+    // Check if link is expired (60 seconds)
+    const age = Math.floor((Date.now() / 1000) - userData.timestamp);
+    if (age > 60) {
+        console.error("Payload expired");
+        return false;
+    }
+
+    try {
+        // Try to sign in existing user
+        await signInWithEmailAndPassword(auth, userData.email, userData.password || 'defaultPassword123');
+        console.log('Auto sign-in successful for existing user');
+        return true;
+    } catch (error) {
+        // If user doesn't exist, create new account
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password || 'defaultPassword123');
+                console.log('Auto sign-up successful for new user:', userCredential.user);
+                
+                // Store additional user data in Firestore
+                await setDoc(doc(db, 'users', userCredential.user.uid), {
+                    username: userData.username,
+                    email: userData.email,
+                    createdAt: new Date(),
+                    autoCreated: true
+                });
+                
+                return true;
+            } catch (signUpError) {
+                console.error('Auto sign-up failed:', signUpError);
+                return false;
+            }
+        }
+        console.error('Auto sign-in failed:', error);
+        return false;
+    }
+}
+
 // Toggle between Sign-In and Sign-Up
 toggleLink.addEventListener('click', (e) => {
     e.preventDefault();
@@ -61,12 +142,12 @@ toggleLink.addEventListener('click', (e) => {
         document.getElementById('login-button').style.display = 'none';
         signupButton.style.display = 'block';
         toggleLink.textContent = 'Already have an account? Sign In';
-        authHeader.textContent = 'Sign Up';  // Change to "Sign Up" in header
+        authHeader.textContent = 'Sign Up';
     } else {
         document.getElementById('login-button').style.display = 'block';
         signupButton.style.display = 'none';
-        toggleLink.textContent = 'Don’t have an account? Sign Up';
-        authHeader.textContent = 'Login';  // Change to "Login" in header
+        toggleLink.textContent = 'Don't have an account? Sign Up';
+        authHeader.textContent = 'Login';
     }
 });
 
@@ -75,7 +156,7 @@ signInButton.addEventListener('click', () => {
     loginModal.style.display = 'flex';
     setTimeout(() => {
         loginModal.classList.add('show');
-    }, 10); // Slight delay to allow CSS transition to work
+    }, 10);
 });
 
 // Close login modal
@@ -83,7 +164,7 @@ closeButton.addEventListener('click', () => {
     loginModal.classList.remove('show');
     setTimeout(() => {
         loginModal.style.display = 'none';
-    }, 300);  // Wait for the transition to complete before hiding
+    }, 300);
 });
 
 // Handle Google Sign-In from modal
@@ -94,7 +175,7 @@ googleSignInButton.addEventListener('click', () => {
             loginModal.classList.remove('show');
             setTimeout(() => {
                 loginModal.style.display = 'none';
-            }, 300);  // Wait for the transition to complete before hiding
+            }, 300);
             toggleUI(true);
             checkAndCreatePaymentRecord(result.user);
         })
@@ -115,7 +196,7 @@ loginButton.addEventListener('click', () => {
             loginModal.classList.remove('show');
             setTimeout(() => {
                 loginModal.style.display = 'none';
-            }, 300);  // Wait for the transition to complete before hiding
+            }, 300);
             toggleUI(true);
             checkAndCreatePaymentRecord(user);
         })
@@ -138,7 +219,7 @@ signupButton.addEventListener('click', () => {
             console.log('User signed up:', user);
             
             toggleUI(true);
-            loginModal.style.display = 'none'; // Hide modal after sign-up
+            loginModal.style.display = 'none';
             checkAndCreatePaymentRecord(user);
         })
         .catch((error) => {
@@ -178,21 +259,19 @@ signOutButton.addEventListener('click', () => {
             toggleUI(false);
             loginModal.style.display = 'none';
             loginModal.classList.remove('show');
-            location.reload(); // Refresh the page after signing out
+            location.reload();
         })
         .catch(error => {
             console.error('Sign out error:', error);
         });
 });
 
-// Listen for changes in the auth state (e.g., sign in, sign out)
+// Listen for changes in the auth state
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        // User is signed in
         toggleUI(true);
         checkAndCreatePaymentRecord(user);
     } else {
-        // User is signed out
         toggleUI(false);
     }
 });
@@ -200,11 +279,11 @@ onAuthStateChanged(auth, (user) => {
 // Toggle UI based on user auth state
 function toggleUI(isSignedIn) {
     if (isSignedIn) {
-        signInButton.style.display = 'none';  // Hide sign in button
-        signOutButton.style.display = 'block'; // Show sign out button
+        signInButton.style.display = 'none';
+        signOutButton.style.display = 'block';
     } else {
-        signInButton.style.display = 'block'; // Show sign in button
-        signOutButton.style.display = 'none';  // Hide sign out button
+        signInButton.style.display = 'block';
+        signOutButton.style.display = 'none';
     }
 }
 
@@ -212,13 +291,11 @@ function toggleUI(isSignedIn) {
 uploadButton.addEventListener('click', () => {
     const user = auth.currentUser;
     if (!user) {
-        // If user is not signed in, trigger the login modal
         loginModal.style.display = 'flex';
         setTimeout(() => {
             loginModal.classList.add('show');
-        }, 10);  // Slight delay to allow CSS transition
+        }, 10);
     } else {
-        // If signed in, trigger the file upload
         resumeUpload.click();
     }
 });
@@ -264,7 +341,7 @@ function handleFileUpload(file) {
         return;
     }
 
-    showLoader();  // Show loader while uploading
+    showLoader();
 
     const storageRef = ref(storage, `resumes/${user.uid}/${file.name}`);
     uploadBytes(storageRef, file)
@@ -274,12 +351,12 @@ function handleFileUpload(file) {
         })
         .then((url) => {
             uploadedFileUrl = url;
-            hideLoader();  // Hide loader after upload
-            updateProgressBar(1);  // Move to step 2 when file upload is done
-            showJobDescriptionInput();  // Proceed to show job description input
+            hideLoader();
+            updateProgressBar(1);
+            showJobDescriptionInput();
         })
         .catch(error => {
-            hideLoader();  // Hide loader if there’s an error
+            hideLoader();
             console.error('File upload error:', error);
         });
 }
@@ -302,8 +379,8 @@ function showJobDescriptionInput() {
     generateButton.addEventListener('click', () => {
         const description = jobDescriptionInput.value.trim();
         if (description && uploadedFileUrl) {
-            updateProgressBar(2);  // Move to step 3 on Generate button click
-            generateCoverLetterAndCheckPayment(description);  // Generate cover letter first, then handle payment
+            updateProgressBar(2);
+            generateCoverLetterAndCheckPayment(description);
         } else {
             alert('Please enter a job description.');
         }
@@ -319,7 +396,6 @@ function generateCoverLetterAndCheckPayment(description) {
         job_description: description
     };
 
-    // First, generate the cover letter
     fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -331,17 +407,14 @@ function generateCoverLetterAndCheckPayment(description) {
     .then(data => {
         console.log('Cover letter generation success:', data);
 
-        const parsedBody = JSON.parse(data.body);  // Parse the response body
-        const coverLetterUrl = parsedBody.cover_letter_url;  // Extract cover letter URL
+        const parsedBody = JSON.parse(data.body);
+        const coverLetterUrl = parsedBody.cover_letter_url;
 
         if (coverLetterUrl) {
-            uploadedFileUrl = coverLetterUrl;  // Store the URL for later use
+            uploadedFileUrl = coverLetterUrl;
             console.log('Cover letter URL:', uploadedFileUrl);
 
-            // Store the cover letter URL in Firebase Storage as a text file
             storeCoverLetterUrlInStorage(coverLetterUrl);
-
-            // Now check payment status after generating the cover letter
             checkPaymentStatusAndProceed();
         } else {
             console.error('Cover letter URL not found.');
@@ -362,7 +435,6 @@ async function storeCoverLetterUrlInStorage(coverLetterUrl) {
     const user = auth.currentUser;
     const storageRef = ref(storage, `cover_letters/${user.uid}/cover_letter_url.txt`);
 
-    // Store the URL as text in Firebase Storage
     await uploadString(storageRef, coverLetterUrl);
     console.log('Cover letter URL stored as a .txt file in Firebase Storage.');
 }
@@ -381,10 +453,8 @@ async function checkPaymentStatusAndProceed() {
     if (paymentDocSnap.exists()) {
         const paymentData = paymentDocSnap.data();
         if (paymentData.payment_status === false) {
-            // Redirect to Stripe for payment
             window.location.href = stripePaymentUrl;
         } else {
-            // If already paid, retrieve cover letter URL and trigger download
             fetchCoverLetterUrlFromStorageAndDownload();
         }
     } else {
@@ -400,7 +470,7 @@ async function fetchCoverLetterUrlFromStorageAndDownload() {
     try {
         const url = await getDownloadURL(storageRef);
         const response = await fetch(url);
-        const coverLetterUrl = await response.text();  // Read the content (URL) from the .txt file
+        const coverLetterUrl = await response.text();
 
         if (coverLetterUrl) {
             uploadedFileUrl = coverLetterUrl;
@@ -418,15 +488,14 @@ function triggerCoverLetterDownload() {
     if (uploadedFileUrl) {
         const link = document.createElement('a');
         link.href = uploadedFileUrl;
-        link.download = 'AI_cover_letter.pdf';  // Rename the file to AI_cover_letter.pdf
+        link.download = 'AI_cover_letter.pdf';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
 
-        // Refresh the page after download, removing URL parameters (like ?id=CHECKOUT_SESSION_ID)
         setTimeout(() => {
-            window.location.href = window.location.origin;  // This reloads the page without any query parameters
-        }, 2000);  // Wait for 2 seconds before refreshing
+            window.location.href = window.location.origin;
+        }, 2000);
     } else {
         console.error('No cover letter URL found for download.');
     }
@@ -447,24 +516,20 @@ function captureCheckoutSessionAndUpdatePayment() {
 
         const paymentDocRef = doc(db, 'payments', user.uid);
 
-        // Immediately store payment info and trigger download
         setTimeout(async () => {
             try {
-                // Update Firestore with payment status and session ID
                 await setDoc(paymentDocRef, {
                     payment_status: true,
                     checkout_session_id: checkoutSessionId
                 }, { merge: true });
 
                 console.log('Payment status updated successfully with session ID:', checkoutSessionId);
-
-                // Fetch the cover letter URL from Firebase Storage and trigger download
                 fetchCoverLetterUrlFromStorageAndDownload();
 
             } catch (error) {
                 console.error('Error updating payment status:', error);
             }
-        }, 1000); // Adding a small delay just for better UX
+        }, 1000);
     } else {
         console.error('No checkout session ID found in the URL.');
     }
@@ -472,12 +537,15 @@ function captureCheckoutSessionAndUpdatePayment() {
 
 // Check for the checkout session and update payment status if successful
 window.addEventListener('load', () => {
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // Once the user is authenticated, proceed with checking the session ID and updating the payment status
             captureCheckoutSessionAndUpdatePayment(user);
         } else {
-            console.error('User is not signed in.');
+            // Try auto sign-in from payload if no user is authenticated
+            const autoSignInSuccess = await autoSignInFromPayload();
+            if (!autoSignInSuccess) {
+                console.log('No payload or auto sign-in failed');
+            }
         }
     });
 });
@@ -488,7 +556,6 @@ async function checkAndCreatePaymentRecord(user) {
     const paymentDocSnap = await getDoc(paymentDocRef);
 
     if (!paymentDocSnap.exists()) {
-        // Create a payment record with payment_status = false
         await setDoc(paymentDocRef, { payment_status: false });
         console.log('Created new payment record for user:', user.uid);
     } else {
@@ -523,10 +590,7 @@ document.querySelectorAll('.faq-question').forEach(question => {
         const answer = question.nextElementSibling;
         const isVisible = answer.style.display === 'block';
 
-        // Hide all answers
         document.querySelectorAll('.faq-answer').forEach(a => a.style.display = 'none');
-
-        // Toggle current answer
         answer.style.display = isVisible ? 'none' : 'block';
     });
 });
@@ -540,14 +604,14 @@ document.addEventListener('keydown', (event) => {
             loginModal.classList.remove('show');
             setTimeout(() => {
                 loginModal.style.display = 'none';
-            }, 300);  // Wait for the transition to complete before hiding
+            }, 300);
         }
 
         if (event.key === 'Enter') {
             if (isSignUpMode) {
-                signupButton.click();  // Trigger sign-up
+                signupButton.click();
             } else {
-                loginButton.click();  // Trigger login
+                loginButton.click();
             }
         }
     }
