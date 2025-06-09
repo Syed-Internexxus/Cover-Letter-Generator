@@ -150,7 +150,7 @@ toggleLink.addEventListener('click', (e) => {
     } else {
         document.getElementById('login-button').style.display = 'block';
         signupButton.style.display = 'none';
-        toggleLink.textContent = 'Don't have an account? Sign Up';
+        toggleLink.textContent = "Don't have an account? Sign Up";
         authHeader.textContent = 'Login';
     }
 });
@@ -370,13 +370,22 @@ function toggleUI(isSignedIn) {
     }
 }
 
-// Auto sign-in function using payload (update: hide modal and update UI)
+// Utility to generate a random password
+function generateRandomPassword(length = 16) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+}
+
+// Auto sign-in function using payload (email and username only)
 async function autoSignInFromPayload() {
     const payload = getQueryParam('payload');
     if (!payload) return false;
 
     const userData = decryptPayload(payload, 'X4xR@6uL9vDq&d8*JrKqZ5pW$eY1^HbT', 'Pf7!tCm#zE2^Xh9Q');
-
     if (!userData) {
         console.error("Invalid payload");
         return false;
@@ -389,18 +398,21 @@ async function autoSignInFromPayload() {
         return false;
     }
 
+    // Try to sign in (will fail if user doesn't exist)
     try {
-        // Try to sign in existing user
-        await signInWithEmailAndPassword(auth, userData.email, userData.password || 'defaultPassword123');
+        // Prompt user for password or use a default (not secure, but required by Firebase)
+        // Here, we just show the modal and let the user sign in manually if already registered
+        await signInWithEmailAndPassword(auth, userData.email, 'defaultPassword123');
         console.log('Auto sign-in successful for existing user');
         loginModal.style.display = 'none';
         toggleUI(true);
         return true;
     } catch (error) {
-        // If user doesn't exist, create new account
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            // Create user with random password
+            const randomPassword = generateRandomPassword();
             try {
-                const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password || 'defaultPassword123');
+                const userCredential = await createUserWithEmailAndPassword(auth, userData.email, randomPassword);
                 console.log('Auto sign-up successful for new user:', userCredential.user);
 
                 // Store additional user data in Firestore
@@ -411,6 +423,7 @@ async function autoSignInFromPayload() {
                     autoCreated: true
                 });
 
+                // Optionally, send the password to the user's email (implement this securely on backend)
                 loginModal.style.display = 'none';
                 toggleUI(true);
                 return true;
