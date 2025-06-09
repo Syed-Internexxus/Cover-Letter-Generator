@@ -123,7 +123,7 @@ loginButton.addEventListener('click', () => {
             const errorCode = error.code;
             const errorMessage = error.message;
             console.error('Email sign in error:', errorCode, errorMessage);
-            alert(Error: ${errorMessage});
+            alert(`Error: ${errorMessage}`);
         });
 });
 
@@ -145,7 +145,7 @@ signupButton.addEventListener('click', () => {
             const errorCode = error.code;
             const errorMessage = error.message;
             console.error('Sign up error:', errorCode, errorMessage);
-            alert(Sign up failed: ${errorMessage});
+            alert(`Sign up failed: ${errorMessage}`);
         });
 });
 
@@ -166,7 +166,7 @@ forgotPasswordLink.addEventListener('click', () => {
             const errorCode = error.code;
             const errorMessage = error.message;
             console.error('Password reset error:', errorCode, errorMessage);
-            alert(Error: ${errorMessage});
+            alert(`Error: ${errorMessage}`);
         });
 });
 
@@ -266,7 +266,7 @@ function handleFileUpload(file) {
 
     showLoader();  // Show loader while uploading
 
-    const storageRef = ref(storage, resumes/${user.uid}/${file.name});
+    const storageRef = ref(storage, `resumes/${user.uid}/${file.name}`);
     uploadBytes(storageRef, file)
         .then((snapshot) => {
             console.log('File uploaded successfully');
@@ -360,7 +360,7 @@ function generateCoverLetterAndCheckPayment(description) {
 // Store Cover Letter URL as a text file in Firebase Storage
 async function storeCoverLetterUrlInStorage(coverLetterUrl) {
     const user = auth.currentUser;
-    const storageRef = ref(storage, cover_letters/${user.uid}/cover_letter_url.txt);
+    const storageRef = ref(storage, `cover_letters/${user.uid}/cover_letter_url.txt`);
 
     // Store the URL as text in Firebase Storage
     await uploadString(storageRef, coverLetterUrl);
@@ -395,7 +395,7 @@ async function checkPaymentStatusAndProceed() {
 // Fetch Cover Letter URL from the stored .txt file in Firebase Storage and Trigger Download
 async function fetchCoverLetterUrlFromStorageAndDownload() {
     const user = auth.currentUser;
-    const storageRef = ref(storage, cover_letters/${user.uid}/cover_letter_url.txt);
+    const storageRef = ref(storage, `cover_letters/${user.uid}/cover_letter_url.txt`);
 
     try {
         const url = await getDownloadURL(storageRef);
