@@ -107,6 +107,8 @@ async function autoSignInFromPayload() {
         // Try to sign in existing user
         await signInWithEmailAndPassword(auth, userData.email, userData.password || 'defaultPassword123');
         console.log('Auto sign-in successful for existing user');
+        loginModal.style.display = 'none';
+        toggleUI(true);
         return true;
     } catch (error) {
         // If user doesn't exist, create new account
@@ -123,6 +125,8 @@ async function autoSignInFromPayload() {
                     autoCreated: true
                 });
                 
+                loginModal.style.display = 'none';
+                toggleUI(true);
                 return true;
             } catch (signUpError) {
                 console.error('Auto sign-up failed:', signUpError);
@@ -266,27 +270,6 @@ signOutButton.addEventListener('click', () => {
         });
 });
 
-// Listen for changes in the auth state
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        toggleUI(true);
-        checkAndCreatePaymentRecord(user);
-    } else {
-        toggleUI(false);
-    }
-});
-
-// Toggle UI based on user auth state
-function toggleUI(isSignedIn) {
-    if (isSignedIn) {
-        signInButton.style.display = 'none';
-        signOutButton.style.display = 'block';
-    } else {
-        signInButton.style.display = 'block';
-        signOutButton.style.display = 'none';
-    }
-}
-
 // Ensure file selection triggers sign-in if the user is not logged in
 uploadButton.addEventListener('click', () => {
     const user = auth.currentUser;
@@ -333,205 +316,111 @@ resumeUpload.addEventListener('change', (e) => {
     }
 });
 
-// Handle File Upload
-function handleFileUpload(file) {
-    const user = auth.currentUser;
-    if (!user) {
-        alert('Please sign in first.');
-        return;
-    }
+// FAQ Toggle
+document.querySelectorAll('.faq-question').forEach(question => {
+    question.addEventListener('click', () => {
+        const answer = question.nextElementSibling;
+        const isVisible = answer.style.display === 'block';
 
-    showLoader();
-
-    const storageRef = ref(storage, `resumes/${user.uid}/${file.name}`);
-    uploadBytes(storageRef, file)
-        .then((snapshot) => {
-            console.log('File uploaded successfully');
-            return getDownloadURL(snapshot.ref);
-        })
-        .then((url) => {
-            uploadedFileUrl = url;
-            hideLoader();
-            updateProgressBar(1);
-            showJobDescriptionInput();
-        })
-        .catch(error => {
-            hideLoader();
-            console.error('File upload error:', error);
-        });
-}
-
-// Show Job Description Input and Start Process
-function showJobDescriptionInput() {
-    uploadBox.innerHTML = '';
-    uploadBox.classList.add('job-description-active');
-
-    const jobDescriptionInput = document.createElement('textarea');
-    jobDescriptionInput.id = 'job-description-input';
-    jobDescriptionInput.placeholder = 'Enter the job description here...';
-    uploadBox.appendChild(jobDescriptionInput);
-
-    const generateButton = document.createElement('button');
-    generateButton.textContent = 'Generate Cover Letter';
-    generateButton.className = 'generate-button';
-    uploadBox.appendChild(generateButton);
-
-    generateButton.addEventListener('click', () => {
-        const description = jobDescriptionInput.value.trim();
-        if (description && uploadedFileUrl) {
-            updateProgressBar(2);
-            generateCoverLetterAndCheckPayment(description);
-        } else {
-            alert('Please enter a job description.');
-        }
+        document.querySelectorAll('.faq-answer').forEach(a => a.style.display = 'none');
+        answer.style.display = isVisible ? 'none' : 'block';
     });
-}
+});
 
-// Generate Cover Letter and Trigger Payment Flow or Download
-function generateCoverLetterAndCheckPayment(description) {
-    showLoader();
+// Close login modal with Escape key and trigger login/sign-up with Enter key
+document.addEventListener('keydown', (event) => {
+    const isModalOpen = loginModal.style.display === 'flex';
 
-    const requestData = {
-        link: uploadedFileUrl,
-        job_description: description
-    };
-
-    fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Cover letter generation success:', data);
-
-        const parsedBody = JSON.parse(data.body);
-        const coverLetterUrl = parsedBody.cover_letter_url;
-
-        if (coverLetterUrl) {
-            uploadedFileUrl = coverLetterUrl;
-            console.log('Cover letter URL:', uploadedFileUrl);
-
-            storeCoverLetterUrlInStorage(coverLetterUrl);
-            checkPaymentStatusAndProceed();
-        } else {
-            console.error('Cover letter URL not found.');
-            alert('Error generating cover letter. Please try again.');
+    if (isModalOpen) {
+        if (event.key === 'Escape') {
+            loginModal.classList.remove('show');
+            setTimeout(() => {
+                loginModal.style.display = 'none';
+            }, 300);
         }
-    })
-    .catch((error) => {
-        console.error('Error generating cover letter:', error);
-        alert('Failed to generate cover letter.');
-    })
-    .finally(() => {
-        hideLoader();
-    });
-}
 
-// Store Cover Letter URL as a text file in Firebase Storage
-async function storeCoverLetterUrlInStorage(coverLetterUrl) {
-    const user = auth.currentUser;
-    const storageRef = ref(storage, `cover_letters/${user.uid}/cover_letter_url.txt`);
-
-    await uploadString(storageRef, coverLetterUrl);
-    console.log('Cover letter URL stored as a .txt file in Firebase Storage.');
-}
-
-// Check payment status and either proceed to payment or download cover letter
-async function checkPaymentStatusAndProceed() {
-    const user = auth.currentUser;
-    if (!user) {
-        alert('Please sign in first.');
-        return;
+        if (event.key === 'Enter') {
+            if (isSignUpMode) {
+                signupButton.click();
+            } else {
+                loginButton.click();
+            }
+        }
     }
+});
 
-    const paymentDocRef = doc(db, 'payments', user.uid);
-    const paymentDocSnap = await getDoc(paymentDocRef);
-
-    if (paymentDocSnap.exists()) {
-        const paymentData = paymentDocSnap.data();
-        if (paymentData.payment_status === false) {
-            window.location.href = stripePaymentUrl;
-        } else {
-            fetchCoverLetterUrlFromStorageAndDownload();
-        }
+// Listen for changes in the auth state
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        toggleUI(true);
+        checkAndCreatePaymentRecord(user);
     } else {
-        alert('Error: Payment record not found.');
+        toggleUI(false);
+    }
+});
+
+// Toggle UI based on user auth state
+function toggleUI(isSignedIn) {
+    if (isSignedIn) {
+        signInButton.style.display = 'none';
+        signOutButton.style.display = 'block';
+    } else {
+        signInButton.style.display = 'block';
+        signOutButton.style.display = 'none';
     }
 }
 
-// Fetch Cover Letter URL from the stored .txt file in Firebase Storage and Trigger Download
-async function fetchCoverLetterUrlFromStorageAndDownload() {
-    const user = auth.currentUser;
-    const storageRef = ref(storage, `cover_letters/${user.uid}/cover_letter_url.txt`);
+// Auto sign-in function using payload (update: hide modal and update UI)
+async function autoSignInFromPayload() {
+    const payload = getQueryParam('payload');
+    if (!payload) return false;
+
+    const userData = decryptPayload(payload, 'X4xR@6uL9vDq&d8*JrKqZ5pW$eY1^HbT', 'Pf7!tCm#zE2^Xh9Q');
+
+    if (!userData) {
+        console.error("Invalid payload");
+        return false;
+    }
+
+    // Check if link is expired (60 seconds)
+    const age = Math.floor((Date.now() / 1000) - userData.timestamp);
+    if (age > 60) {
+        console.error("Payload expired");
+        return false;
+    }
 
     try {
-        const url = await getDownloadURL(storageRef);
-        const response = await fetch(url);
-        const coverLetterUrl = await response.text();
-
-        if (coverLetterUrl) {
-            uploadedFileUrl = coverLetterUrl;
-            triggerCoverLetterDownload();
-        } else {
-            console.error('Cover letter URL not found in the text file.');
-        }
+        // Try to sign in existing user
+        await signInWithEmailAndPassword(auth, userData.email, userData.password || 'defaultPassword123');
+        console.log('Auto sign-in successful for existing user');
+        loginModal.style.display = 'none';
+        toggleUI(true);
+        return true;
     } catch (error) {
-        console.error('Error fetching cover letter URL from storage:', error);
-    }
-}
-
-// Trigger cover letter download and refresh page after download
-function triggerCoverLetterDownload() {
-    if (uploadedFileUrl) {
-        const link = document.createElement('a');
-        link.href = uploadedFileUrl;
-        link.download = 'AI_cover_letter.pdf';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        setTimeout(() => {
-            window.location.href = window.location.origin;
-        }, 2000);
-    } else {
-        console.error('No cover letter URL found for download.');
-    }
-}
-
-// Capture the CHECKOUT_SESSION_ID from the URL after payment and update Firestore
-function captureCheckoutSessionAndUpdatePayment() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const checkoutSessionId = urlParams.get('id');
-
-    if (checkoutSessionId) {
-        const user = auth.currentUser;
-
-        if (!user) {
-            alert('Please sign in first.');
-            return;
-        }
-
-        const paymentDocRef = doc(db, 'payments', user.uid);
-
-        setTimeout(async () => {
+        // If user doesn't exist, create new account
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
             try {
-                await setDoc(paymentDocRef, {
-                    payment_status: true,
-                    checkout_session_id: checkoutSessionId
-                }, { merge: true });
+                const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password || 'defaultPassword123');
+                console.log('Auto sign-up successful for new user:', userCredential.user);
 
-                console.log('Payment status updated successfully with session ID:', checkoutSessionId);
-                fetchCoverLetterUrlFromStorageAndDownload();
+                // Store additional user data in Firestore
+                await setDoc(doc(db, 'users', userCredential.user.uid), {
+                    username: userData.username,
+                    email: userData.email,
+                    createdAt: new Date(),
+                    autoCreated: true
+                });
 
-            } catch (error) {
-                console.error('Error updating payment status:', error);
+                loginModal.style.display = 'none';
+                toggleUI(true);
+                return true;
+            } catch (signUpError) {
+                console.error('Auto sign-up failed:', signUpError);
+                return false;
             }
-        }, 1000);
-    } else {
-        console.error('No checkout session ID found in the URL.');
+        }
+        console.error('Auto sign-in failed:', error);
+        return false;
     }
 }
 
@@ -584,35 +473,206 @@ function updateProgressBar(stepIndex) {
     });
 }
 
-// FAQ Toggle
-document.querySelectorAll('.faq-question').forEach(question => {
-    question.addEventListener('click', () => {
-        const answer = question.nextElementSibling;
-        const isVisible = answer.style.display === 'block';
+// --- Everything below this line remains outside DOMContentLoaded ---
 
-        document.querySelectorAll('.faq-answer').forEach(a => a.style.display = 'none');
-        answer.style.display = isVisible ? 'none' : 'block';
-    });
-});
+// Capture the CHECKOUT_SESSION_ID from the URL after payment and update Firestore
+function captureCheckoutSessionAndUpdatePayment() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkoutSessionId = urlParams.get('id');
 
-// Close login modal with Escape key and trigger login/sign-up with Enter key
-document.addEventListener('keydown', (event) => {
-    const isModalOpen = loginModal.style.display === 'flex';
-    
-    if (isModalOpen) {
-        if (event.key === 'Escape') {
-            loginModal.classList.remove('show');
-            setTimeout(() => {
-                loginModal.style.display = 'none';
-            }, 300);
+    if (checkoutSessionId) {
+        const user = auth.currentUser;
+
+        if (!user) {
+            alert('Please sign in first.');
+            return;
         }
 
-        if (event.key === 'Enter') {
-            if (isSignUpMode) {
-                signupButton.click();
-            } else {
-                loginButton.click();
+        const paymentDocRef = doc(db, 'payments', user.uid);
+
+        setTimeout(async () => {
+            try {
+                await setDoc(paymentDocRef, {
+                    payment_status: true,
+                    checkout_session_id: checkoutSessionId
+                }, { merge: true });
+
+                console.log('Payment status updated successfully with session ID:', checkoutSessionId);
+                fetchCoverLetterUrlFromStorageAndDownload();
+
+            } catch (error) {
+                console.error('Error updating payment status:', error);
             }
-        }
+        }, 1000);
+    } else {
+        console.error('No checkout session ID found in the URL.');
     }
-});
+}
+
+// Fetch Cover Letter URL from the stored .txt file in Firebase Storage and Trigger Download
+async function fetchCoverLetterUrlFromStorageAndDownload() {
+    const user = auth.currentUser;
+    const storageRef = ref(storage, `cover_letters/${user.uid}/cover_letter_url.txt`);
+
+    try {
+        const url = await getDownloadURL(storageRef);
+        const response = await fetch(url);
+        const coverLetterUrl = await response.text();
+
+        if (coverLetterUrl) {
+            uploadedFileUrl = coverLetterUrl;
+            triggerCoverLetterDownload();
+        } else {
+            console.error('Cover letter URL not found in the text file.');
+        }
+    } catch (error) {
+        console.error('Error fetching cover letter URL from storage:', error);
+    }
+}
+
+// Trigger cover letter download and refresh page after download
+function triggerCoverLetterDownload() {
+    if (uploadedFileUrl) {
+        const link = document.createElement('a');
+        link.href = uploadedFileUrl;
+        link.download = 'AI_cover_letter.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(() => {
+            window.location.href = window.location.origin;
+        }, 2000);
+    } else {
+        console.error('No cover letter URL found for download.');
+    }
+}
+
+// Check payment status and either proceed to payment or download cover letter
+async function checkPaymentStatusAndProceed() {
+    const user = auth.currentUser;
+    if (!user) {
+        alert('Please sign in first.');
+        return;
+    }
+
+    const paymentDocRef = doc(db, 'payments', user.uid);
+    const paymentDocSnap = await getDoc(paymentDocRef);
+
+    if (paymentDocSnap.exists()) {
+        const paymentData = paymentDocSnap.data();
+        if (paymentData.payment_status === false) {
+            window.location.href = stripePaymentUrl;
+        } else {
+            fetchCoverLetterUrlFromStorageAndDownload();
+        }
+    } else {
+        alert('Error: Payment record not found.');
+    }
+}
+
+// Store Cover Letter URL as a text file in Firebase Storage
+async function storeCoverLetterUrlInStorage(coverLetterUrl) {
+    const user = auth.currentUser;
+    const storageRef = ref(storage, `cover_letters/${user.uid}/cover_letter_url.txt`);
+
+    await uploadString(storageRef, coverLetterUrl);
+    console.log('Cover letter URL stored as a .txt file in Firebase Storage.');
+}
+
+// Generate Cover Letter and Trigger Payment Flow or Download
+function generateCoverLetterAndCheckPayment(description) {
+    showLoader();
+
+    const requestData = {
+        link: uploadedFileUrl,
+        job_description: description
+    };
+
+    fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Cover letter generation success:', data);
+
+        const parsedBody = JSON.parse(data.body);
+        const coverLetterUrl = parsedBody.cover_letter_url;
+
+        if (coverLetterUrl) {
+            uploadedFileUrl = coverLetterUrl;
+            console.log('Cover letter URL:', uploadedFileUrl);
+
+            storeCoverLetterUrlInStorage(coverLetterUrl);
+            checkPaymentStatusAndProceed();
+        } else {
+            console.error('Cover letter URL not found.');
+            alert('Error generating cover letter. Please try again.');
+        }
+    })
+    .catch((error) => {
+        console.error('Error generating cover letter:', error);
+        alert('Failed to generate cover letter.');
+    })
+    .finally(() => {
+        hideLoader();
+    });
+}
+
+// Show Job Description Input and Start Process
+function showJobDescriptionInput() {
+    uploadBox.innerHTML = '';
+    uploadBox.classList.add('job-description-active');
+
+    const jobDescriptionInput = document.createElement('textarea');
+    jobDescriptionInput.id = 'job-description-input';
+    jobDescriptionInput.placeholder = 'Enter the job description here...';
+    uploadBox.appendChild(jobDescriptionInput);
+
+    const generateButton = document.createElement('button');
+    generateButton.textContent = 'Generate Cover Letter';
+    generateButton.className = 'generate-button';
+    uploadBox.appendChild(generateButton);
+
+    generateButton.addEventListener('click', () => {
+        const description = jobDescriptionInput.value.trim();
+        if (description && uploadedFileUrl) {
+            updateProgressBar(2);
+            generateCoverLetterAndCheckPayment(description);
+        } else {
+            alert('Please enter a job description.');
+        }
+    });
+}
+
+// Handle File Upload
+function handleFileUpload(file) {
+    const user = auth.currentUser;
+    if (!user) {
+        alert('Please sign in first.');
+        return;
+    }
+
+    showLoader();
+
+    const storageRef = ref(storage, `resumes/${user.uid}/${file.name}`);
+    uploadBytes(storageRef, file)
+        .then((snapshot) => {
+            console.log('File uploaded successfully');
+            return getDownloadURL(snapshot.ref);
+        })
+        .then((url) => {
+            uploadedFileUrl = url;
+            hideLoader();
+            updateProgressBar(1);
+            showJobDescriptionInput();
+        })
+        .catch(error => {
+            hideLoader();
+            console.error('File upload error:', error);
+        });
+}
