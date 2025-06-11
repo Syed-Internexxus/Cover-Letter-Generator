@@ -53,16 +53,53 @@ const stripePaymentUrl = 'https://buy.stripe.com/7sIcQzeORaoQ5S828a';
 // Variable to store the download URL
 let uploadedFileUrl = '';
 
+// Secret key for decryption
+const SECRET_KEY = 'X4xR@6uL9vDq&d8*JrKqZ5pW$eY1^HbT';
+
 // Payload decryption functions
 function getQueryParam(name) {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(name);
 }
 
-function decryptPayload(encryptedBase64, key, salt) {
+// Updated decryptPayload function that handles both approaches
+function decryptPayload(encryptedPayload, secretKey) {
     try {
-        const encrypted = CryptoJS.enc.Base64.parse(encryptedBase64);
-        const keyHash = CryptoJS.SHA256(key);
+        // Method 1: Try the IV-based approach first (from paste-2.txt)
+        try {
+            const decodedUriComponent = decodeURIComponent(encryptedPayload);
+            const data = CryptoJS.enc.Base64.parse(decodedUriComponent);
+            
+            // Extract IV (first 16 bytes) and ciphertext (remainder)
+            const iv = CryptoJS.lib.WordArray.create(data.words.slice(0, 4), 16);
+            const ciphertext = CryptoJS.lib.WordArray.create(data.words.slice(4), data.sigBytes - 16);
+            
+            // Derive key using SHA256
+            const key = CryptoJS.SHA256(secretKey);
+            
+            // Decrypt
+            const decrypted = CryptoJS.AES.decrypt(
+                { ciphertext: ciphertext },
+                key,
+                {
+                    iv: iv,
+                    mode: CryptoJS.mode.CBC,
+                    padding: CryptoJS.pad.Pkcs7
+                }
+            );
+            
+            const plaintext = decrypted.toString(CryptoJS.enc.Utf8);
+            if (plaintext) {
+                return JSON.parse(plaintext);
+            }
+        } catch (e) {
+            console.log("Method 1 failed, trying method 2...");
+        }
+        
+        // Method 2: Try the salt-based approach (from paste.txt)
+        const encrypted = CryptoJS.enc.Base64.parse(decodeURIComponent(encryptedPayload));
+        const keyHash = CryptoJS.SHA256(secretKey);
+        const salt = 'Pf7!tCm#zE2^Xh9Q'; // Default salt from original code
         const ivHash = CryptoJS.SHA256(salt).toString(CryptoJS.enc.Hex).substring(0, 32);
         const iv = CryptoJS.enc.Hex.parse(ivHash);
 
@@ -78,62 +115,162 @@ function decryptPayload(encryptedBase64, key, salt) {
 
         const plaintext = decrypted.toString(CryptoJS.enc.Utf8);
         return JSON.parse(plaintext);
+        
     } catch (e) {
-        console.error("Decryption failed:", e);
+        console.error("Both decryption methods failed:", e);
         return null;
+    }
+}
+
+// Utility to generate a secure random password
+function generateSecurePassword(length = 16) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+}
+
+// Check if user exists in Firestore
+async function checkUserExistsInFirestore(email) {
+    try {
+        // Query users collection to find user by email
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where("email", "==", email));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+            const userDoc = querySnapshot.docs[0];
+            return { exists: true, userData: userDoc.data(), docId: userDoc.id };
+        }
+        return { exists: false };
+    } catch (error) {
+        console.error("Error checking user in Firestore:", error);
+        return { exists: false };
     }
 }
 
 // Auto sign-in function using payload
 async function autoSignInFromPayload() {
     const payload = getQueryParam('payload');
-    if (!payload) return false;
-
-    const userData = decryptPayload(payload, 'X4xR@6uL9vDq&d8*JrKqZ5pW$eY1^HbT', 'Pf7!tCm#zE2^Xh9Q');
-    
-    if (!userData) {
-        console.error("Invalid payload");
+    if (!payload) {
+        console.log('No payload found in URL');
         return false;
     }
 
-    // Check if link is expired (60 seconds)
-    const age = Math.floor((Date.now() / 1000) - userData.timestamp);
-    if (age > 60) {
-        console.error("Payload expired");
+    console.log('Processing payload:', payload);
+    
+    const userData = decryptPayload(payload, SECRET_KEY);
+    
+    if (!userData) {
+        console.error("Invalid payload - decryption failed");
+        return false;
+    }
+
+    console.log('Decrypted user data:', userData);
+
+    // Check if link is expired (60 seconds from timestamp)
+    if (userData.timestamp) {
+        const age = Math.floor((Date.now() / 1000) - userData.timestamp);
+        if (age > 60) {
+            console.error("Payload expired. Age:", age, "seconds");
+            alert("The login link has expired. Please request a new one.");
+            return false;
+        }
+        console.log('Payload age:', age, 'seconds - valid');
+    }
+
+    if (!userData.email) {
+        console.error("No email found in payload");
         return false;
     }
 
     try {
-        // Try to sign in existing user
-        await signInWithEmailAndPassword(auth, userData.email, userData.password || 'defaultPassword123');
-        console.log('Auto sign-in successful for existing user');
-        loginModal.style.display = 'none';
-        toggleUI(true);
-        return true;
-    } catch (error) {
-        // If user doesn't exist, create new account
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        // Check if user exists in Firestore first
+        const firestoreCheck = await checkUserExistsInFirestore(userData.email);
+        
+        if (firestoreCheck.exists) {
+            console.log('User exists in Firestore, attempting sign-in...');
+            
+            // User exists in Firestore, try to sign them in
+            // First, try with stored password if available
+            const storedPassword = firestoreCheck.userData.generatedPassword || 'defaultPassword123';
+            
             try {
-                const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password || 'defaultPassword123');
-                console.log('Auto sign-up successful for new user:', userCredential.user);
-                
-                // Store additional user data in Firestore
-                await setDoc(doc(db, 'users', userCredential.user.uid), {
-                    username: userData.username,
-                    email: userData.email,
-                    createdAt: new Date(),
-                    autoCreated: true
-                });
-                
+                await signInWithEmailAndPassword(auth, userData.email, storedPassword);
+                console.log('Auto sign-in successful for existing user');
                 loginModal.style.display = 'none';
                 toggleUI(true);
                 return true;
+            } catch (signInError) {
+                console.log('Sign-in failed with stored password, user may need to sign in manually');
+                
+                // If sign-in fails, show the login modal but pre-fill the email
+                if (emailInput) {
+                    emailInput.value = userData.email;
+                }
+                loginModal.style.display = 'flex';
+                setTimeout(() => {
+                    loginModal.classList.add('show');
+                }, 10);
+                
+                return false;
+            }
+        } else {
+            console.log('User does not exist in Firestore, creating new user...');
+            
+            // User doesn't exist, create new account
+            const generatedPassword = generateSecurePassword();
+            
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, userData.email, generatedPassword);
+                console.log('Auto sign-up successful for new user:', userCredential.user);
+                
+                // Store user data in Firestore
+                await setDoc(doc(db, 'users', userCredential.user.uid), {
+                    username: userData.username || userData.email.split('@')[0],
+                    email: userData.email,
+                    createdAt: new Date(),
+                    autoCreated: true,
+                    generatedPassword: generatedPassword, // Store for future auto-logins
+                    payloadData: userData // Store original payload data
+                });
+                
+                console.log('User data stored in Firestore');
+                
+                loginModal.style.display = 'none';
+                toggleUI(true);
+                
+                // Optionally notify user about account creation
+                alert(`Account created successfully for ${userData.email}. You are now logged in.`);
+                
+                return true;
             } catch (signUpError) {
                 console.error('Auto sign-up failed:', signUpError);
+                
+                // Handle specific Firebase Auth errors
+                if (signUpError.code === 'auth/email-already-in-use') {
+                    // Email exists in Firebase Auth but not in our Firestore
+                    // This might happen if user was created outside our system
+                    console.log('Email exists in Firebase Auth, prompting for sign-in');
+                    
+                    if (emailInput) {
+                        emailInput.value = userData.email;
+                    }
+                    loginModal.style.display = 'flex';
+                    setTimeout(() => {
+                        loginModal.classList.add('show');
+                    }, 10);
+                    
+                    alert('An account with this email already exists. Please sign in with your password.');
+                }
+                
                 return false;
             }
         }
-        console.error('Auto sign-in failed:', error);
+    } catch (error) {
+        console.error('Auto sign-in process failed:', error);
         return false;
     }
 }
@@ -221,6 +358,13 @@ signupButton.addEventListener('click', () => {
         .then((userCredential) => {
             const user = userCredential.user;
             console.log('User signed up:', user);
+            
+            // Store user data in Firestore
+            setDoc(doc(db, 'users', user.uid), {
+                email: user.email,
+                createdAt: new Date(),
+                manualSignUp: true
+            });
             
             toggleUI(true);
             loginModal.style.display = 'none';
@@ -370,84 +514,28 @@ function toggleUI(isSignedIn) {
     }
 }
 
-// Utility to generate a random password
-function generateRandomPassword(length = 16) {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=';
-    let password = '';
-    for (let i = 0; i < length; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
+// Page load handler - try auto sign-in from payload
+window.addEventListener('load', async () => {
+    console.log('Page loaded, checking for payload...');
+    
+    // First check if user is already authenticated
+    if (auth.currentUser) {
+        console.log('User already authenticated');
+        return;
     }
-    return password;
-}
-
-// Auto sign-in function using payload (email and username only)
-async function autoSignInFromPayload() {
-    const payload = getQueryParam('payload');
-    if (!payload) return false;
-
-    const userData = decryptPayload(payload, 'X4xR@6uL9vDq&d8*JrKqZ5pW$eY1^HbT', 'Pf7!tCm#zE2^Xh9Q');
-    if (!userData) {
-        console.error("Invalid payload");
-        return false;
+    
+    // Try auto sign-in from payload
+    const autoSignInSuccess = await autoSignInFromPayload();
+    if (autoSignInSuccess) {
+        console.log('Auto sign-in from payload successful');
+    } else {
+        console.log('No payload or auto sign-in failed');
     }
-
-    // Check if link is expired (60 seconds)
-    const age = Math.floor((Date.now() / 1000) - userData.timestamp);
-    if (age > 60) {
-        console.error("Payload expired");
-        return false;
-    }
-
-    // Try to sign in (will fail if user doesn't exist)
-    try {
-        // Prompt user for password or use a default (not secure, but required by Firebase)
-        // Here, we just show the modal and let the user sign in manually if already registered
-        await signInWithEmailAndPassword(auth, userData.email, 'defaultPassword123');
-        console.log('Auto sign-in successful for existing user');
-        loginModal.style.display = 'none';
-        toggleUI(true);
-        return true;
-    } catch (error) {
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-            // Create user with random password
-            const randomPassword = generateRandomPassword();
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, userData.email, randomPassword);
-                console.log('Auto sign-up successful for new user:', userCredential.user);
-
-                // Store additional user data in Firestore
-                await setDoc(doc(db, 'users', userCredential.user.uid), {
-                    username: userData.username,
-                    email: userData.email,
-                    createdAt: new Date(),
-                    autoCreated: true
-                });
-
-                // Optionally, send the password to the user's email (implement this securely on backend)
-                loginModal.style.display = 'none';
-                toggleUI(true);
-                return true;
-            } catch (signUpError) {
-                console.error('Auto sign-up failed:', signUpError);
-                return false;
-            }
-        }
-        console.error('Auto sign-in failed:', error);
-        return false;
-    }
-}
-
-// Check for the checkout session and update payment status if successful
-window.addEventListener('load', () => {
+    
+    // Check for checkout session after auth state is determined
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             captureCheckoutSessionAndUpdatePayment(user);
-        } else {
-            // Try auto sign-in from payload if no user is authenticated
-            const autoSignInSuccess = await autoSignInFromPayload();
-            if (!autoSignInSuccess) {
-                console.log('No payload or auto sign-in failed');
-            }
         }
     });
 });
@@ -485,8 +573,6 @@ function updateProgressBar(stepIndex) {
         }
     });
 }
-
-// --- Everything below this line remains outside DOMContentLoaded ---
 
 // Capture the CHECKOUT_SESSION_ID from the URL after payment and update Firestore
 function captureCheckoutSessionAndUpdatePayment() {
